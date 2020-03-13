@@ -13,6 +13,10 @@ void main() async {
   String systemLocaleString = await findSystemLocale();
   initialDeviceLocale = parseLocale(systemLocaleString);
   print('=====> device locale string $systemLocaleString, parsed locale ${initialDeviceLocale.toString()}');
+
+  S  s1 = await S.load(Locale('en', 'US'));
+  S  s2 = await S.load(Locale('de', 'DE'));
+
   mockup = Mockup();
   runApp(MyApp());
 }
@@ -40,9 +44,57 @@ class Mockup {
   BehaviorSubject<Locale> lang = BehaviorSubject<Locale>.seeded(Locale('en', 'US'));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
 
-  Widget loading(BuildContext context) {
+class _MyAppState extends State<MyApp> {
+
+  Widget buildAppHomeWidget(BuildContext context, User user) {
+    if (user?.status == 0) {
+      return LoadPage();
+    } else if (user?.name == null) {
+      return SignupPage();
+    } else {
+      return HomePage();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        StreamProvider.value(value: mockup.auth.stream),
+        StreamProvider.value(value: mockup.lang.stream)
+      ],
+      child: Consumer2<User, Locale>(
+        builder: (context, user, locale, child) {
+          print('${user?.name}, ${user?.status}, ${locale.toString()}');
+          return MaterialApp(
+            home: buildAppHomeWidget(context, user),
+            onGenerateTitle: (context) => S.of(context).intlExperiments,
+            locale: locale ?? Locale('en', 'US'),
+            localizationsDelegates: [
+              S.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: S.delegate.supportedLocales,
+            localeResolutionCallback: (deviceLocale, supportedLocales) {
+              return locale ?? deviceLocale;
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class LoadPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(S.of(context).loadingUser)),
       body: Center(
@@ -57,8 +109,12 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget signup(BuildContext context) {
+class SignupPage extends StatelessWidget {
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(S.of(context).signup)),
       body: Center(
@@ -79,8 +135,12 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget home(BuildContext context) {
+class HomePage extends StatelessWidget {
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(S.of(context).home)),
       body: Center(
@@ -92,13 +152,13 @@ class MyApp extends StatelessWidget {
             FlatButton(
               child: Text(S.of(context).pressForEngish),
               onPressed: () {
-                Future.delayed(Duration(seconds: 1), () => mockup.lang.add(Locale('en')));
+                Future.delayed(Duration(seconds: 0), () => mockup.lang.add(Locale('en', 'US')));
               },
             ),
             FlatButton(
               child: Text(S.of(context).pressForGerman),
               onPressed: () {
-                Future.delayed(Duration(seconds: 1), () => mockup.lang.add(Locale('de')));
+                Future.delayed(Duration(seconds: 0), () => mockup.lang.add(Locale('de', 'DE')));
               },
             )
           ],
@@ -106,47 +166,4 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
-
-  Widget buildAppHomeWidget(BuildContext context, User user) {
-    if (user?.status == 0) {
-      return loading(context);
-    } else if (user?.name == null) {
-      return signup(context);
-    } else {
-      return home(context);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        StreamProvider.value(value: mockup.auth.stream),
-        StreamProvider.value(value: mockup.lang.stream)
-      ],
-      child: Consumer2<User, Locale>(
-        builder: (context, user, locale, child) {
-          print('${user?.name}, ${user?.status}, ${locale.toString()}');
-
-          return MaterialApp(
-            home: buildAppHomeWidget(context, user),
-            onGenerateTitle: (context) => S.of(context).intlExperiments,
-            locale: locale ?? Locale('en'),
-            localizationsDelegates: [
-              S.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: S.delegate.supportedLocales,
-            localeResolutionCallback: (deviceLocale, supportedLocales) {
-              return locale ?? deviceLocale;
-            },
-          );
-        },
-      ),
-    );
-  }
 }
-
-
